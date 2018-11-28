@@ -4,10 +4,10 @@ var auth = require('./auth.json');
 var Twitter = require('twitter');
 
 var client = new Twitter({
-    consumer_key: auth.consumer_key,
-    consumer_secret: auth.consumer_secret,
-    access_token_key: auth.access_token_key,
-    access_token_secret: auth.access_token_secret
+    consumer_key: process.env.CONSUMER_KEY,
+    consumer_secret: process.env.CONSUMER_SECRET,
+    access_token_key: process.env.ACCESS_TOKEN_KEY,
+    access_token_secret: process.env.ACCESS_TOKEN_SECRET
 });
 
 var accountList = ['plynde'];
@@ -22,7 +22,7 @@ logger.level = 'debug';
 // Initialize Discord Bot
 
 var bot = new Discord.Client({
-    token: auth.token,
+    token: process.env.DISCORD_TOKEN,
     autorun: true
 });
 
@@ -43,7 +43,7 @@ client.stream('statuses/filter', { follow: accountList.join(',') }, function(str
     });
   
     stream.on('error', function(error) {
-      throw error;
+        throw error;
     });
 });
 
