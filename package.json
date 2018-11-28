@@ -4,6 +4,9 @@
     "description": "Twitter bot for Discord",
     "main": "main.js",
     "author": "Yolo Swag",
+    "scripts": {
+        "start": "node main.js"
+    },
     "dependencies": {
         "discord.io": "https://github.com/woor/discord.io/tarball/gateway_v6",
         "twitter": "^1.7.1",
