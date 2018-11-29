@@ -1,7 +1,11 @@
 require('dotenv').config()
 var Discord = require('discord.io');
 var logger = require('winston');
-var Twitter = require('twit')
+var Twitter = require('twit');
+
+const express = require('express');
+const app = express();
+app.listen(process.env.PORT || 3000);
 
 var client = new Twitter({
     consumer_key: process.env.CONSUMER_KEY,
