@@ -2,10 +2,12 @@ require('dotenv').config()
 var Discord = require('discord.io');
 var logger = require('winston');
 var Twitter = require('twit');
+var accountList = require('./accountList.json');
+var fs = require('fs');
 
 const express = require('express');
 const app = express();
-app.listen(process.env.PORT || 3000);
+app.listen(process.env.PORT || 3591);
 
 var client = new Twitter({
     consumer_key: process.env.CONSUMER_KEY,
@@ -15,14 +17,6 @@ var client = new Twitter({
 });
 
 var StreamClient;
-
-var accountList = [{
-    channelID: '517367785899425815',
-    twitterAccount: 'Patou',
-    twitterScreenName: 'plynde',
-    twitterAccountID: '146978473',
-    iconURL: 'https://pbs.twimg.com/profile_images/1258432399/wallpaper-549640_normal.jpg'
-}];
 
 // Configure logger settings
 logger.remove(logger.transports.Console);
@@ -62,13 +56,17 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                         return;
                     }
 
-                    accountList.push({
+                    accountList.accounts.push({
                         channelID: evt.d.channel_id,
                         twitterAccount: userObj[0].name,
                         twitterScreenName: args[1],
                         twitterAccountID: userObj[0].id_str,
                         iconURL: userObj[0].profile_image_url
                     });
+
+                    var json = JSON.stringify(accountList);
+                    fs.writeFile('./accountList.json', json, 'utf8', () => {});
+
                     bot.sendMessage({
                         to: channelID,
                         message: `J'ai ajoute ${userObj[0].name} dans la liste des comptes a suivre.`
@@ -83,12 +81,12 @@ bot.on('message', function(user, userID, channelID, message, evt) {
             case 'list':
                 bot.sendMessage({
                     to: channelID,
-                    message: `Voici la liste des comptes: ${accountList.map(a => a.twitterAccount).join(', ')}.`
+                    message: `Voici la liste des comptes: ${accountList.accounts.filter(a => a.channelID === channelID).map(a => a.twitterAccount + ' (@' + a.twitterScreenName + ')').join(', ')}.`
                 });
                 break;
             // !remove
             case 'remove':
-                accountList = accountList.filter(obj => obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase());
+                accountList.accounts = accountList.accounts.filter(obj => obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase());
                 bot.sendMessage({
                     to: channelID,
                     message: `J'ai enleve ${args[1]} de la liste des comptes a suivre.`
@@ -104,11 +102,25 @@ bot.on('message', function(user, userID, channelID, message, evt) {
     }
 });
 
+bot.on('disconnect', function(errMsg, code) {
+    console.log(`Disconnected from Discord. Error Code ${code}. Message ${errMsg}.`);
+    bot.connect();
+});
+
 function startFollowing() {
-    StreamClient = client.stream('statuses/filter', { follow: accountList.map(a => a.twitterAccountID).join(',') });
+    StreamClient = client.stream('statuses/filter', { follow: accountList.accounts.map(a => a.twitterAccountID).join(',') });
     StreamClient.on('tweet', function(tweet) {
         // base on twitter account send it to the right channel
-        var result = accountList.filter(obj => obj.twitterAccountID === tweet.user.id_str)[0];
+        var result = accountList.accounts.filter(obj => obj.twitterAccountID === tweet.user.id_str)[0];
+
+        if (!result) {
+            result = Object.create(accountList.accounts[0]);
+            result.twitterAccount = tweet.user.name;
+            result.iconURL = tweet.user.profile_image_url;
+            result.twitterScreenName = tweet.user.screen_name;
+            result.id_str = tweet.user.id_str;
+        }
+        
 
         if (result) {
             bot.sendMessage({
@@ -116,15 +128,20 @@ function startFollowing() {
                 embed: {
                     color: 3447003,
                     author: {
-                        name: result.twitterAccount,
+                        name: `${result.twitterAccount} (@${result.twitterScreenName})`,
                         icon_url: result.iconURL,
                         url: `https://twitter.com/${result.twitterAccount}`
                     },
                     url: `https://twitter.com/${result.twitterScreenName}/status/${tweet.id_str}`,
                     title: result.twitterAccount,
                     description: tweet.text,
+                    fields: [{
+                        name: 'From',
+                        value: tweet.user.location,
+                        inline: true
+                    }],
                     footer: {
-                        text: `Tweet created on ${new Date()}`,
+                        text: `Tweet crée le ${new Date()}`,
                         icon_url: 'https://cdn1.iconfinder.com/data/icons/iconza-circle-social/64/697029-twitter-512.png'
                     }
                 }
@@ -134,5 +151,7 @@ function startFollowing() {
 
     StreamClient.on('error', function(error) {
         console.error(error);
+        StreamClient.stop();
+        startFollowing();
     });
 }
