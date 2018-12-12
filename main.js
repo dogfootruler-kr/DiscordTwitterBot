@@ -5,10 +5,6 @@ var Twitter = require('twit');
 var accountList = require('./accountList.json');
 var fs = require('fs');
 
-const express = require('express');
-const app = express();
-app.listen(process.env.PORT || 3591);
-
 var client = new Twitter({
     consumer_key: process.env.CONSUMER_KEY,
     consumer_secret: process.env.CONSUMER_SECRET,
@@ -86,7 +82,11 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                 break;
             // !remove
             case 'remove':
-                accountList.accounts = accountList.accounts.filter(obj => obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase());
+                accountList.accounts = accountList.accounts.filter(obj => (obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase() || (obj.channelID !== channelID && obj.twitterScreenName.toLowerCase() === args[1].toLowerCase())));
+                
+                var json = JSON.stringify(accountList);
+                fs.writeFile('./accountList.json', json, 'utf8', () => {});
+                
                 bot.sendMessage({
                     to: channelID,
                     message: `J'ai enleve ${args[1]} de la liste des comptes a suivre.`
@@ -104,6 +104,7 @@ bot.on('message', function(user, userID, channelID, message, evt) {
 
 bot.on('disconnect', function(errMsg, code) {
     console.log(`Disconnected from Discord. Error Code ${code}. Message ${errMsg}.`);
+    bot.disconnect();
     bot.connect();
 });
 
@@ -111,40 +112,44 @@ function startFollowing() {
     StreamClient = client.stream('statuses/filter', { follow: accountList.accounts.map(a => a.twitterAccountID).join(',') });
     StreamClient.on('tweet', function(tweet) {
         // base on twitter account send it to the right channel
-        var result = accountList.accounts.filter(obj => obj.twitterAccountID === tweet.user.id_str)[0];
+        let results = accountList.accounts.filter(obj => obj.twitterAccountID === tweet.user.id_str);
 
-        if (!result) {
-            result = Object.create(accountList.accounts[0]);
-            result.twitterAccount = tweet.user.name;
-            result.iconURL = tweet.user.profile_image_url;
-            result.twitterScreenName = tweet.user.screen_name;
-            result.id_str = tweet.user.id_str;
-        }
-        
+        for (let i=0; i<results.length; i++) {
+            let result = results[i];
+            let text = '';
+            let imgURL = '';
+            let embedObject = {};
 
-        if (result) {
+            if (tweet.extended_tweet) {
+                text = tweet.extended_tweet.full_text;
+            } else if (tweet.retweeted_status && tweet.retweeted_status.extended_tweet) {
+                text = tweet.retweeted_status.extended_tweet.full_text;
+            } else {
+                text = tweet.text;
+            }
+
+            if (tweet.extended_entities && !!tweet.extended_entities.media.length) {
+                imgURL = tweet.extended_entities.media[0].media_url;
+            }
+
+            embedObject = {
+                color: 3447003,
+                author: {
+                    name: `${result.twitterAccount} (@${result.twitterScreenName})`,
+                    icon_url: result.iconURL,
+                    url: `https://twitter.com/${result.twitterScreenName}`
+                },
+                thumbnail: {
+                    url: `${imgURL}`
+                },
+                url: `https://twitter.com/${result.twitterScreenName}/status/${tweet.id_str}`,
+                title: result.twitterAccount,
+                description: text
+            };
+
             bot.sendMessage({
                 to: result.channelID,
-                embed: {
-                    color: 3447003,
-                    author: {
-                        name: `${result.twitterAccount} (@${result.twitterScreenName})`,
-                        icon_url: result.iconURL,
-                        url: `https://twitter.com/${result.twitterAccount}`
-                    },
-                    url: `https://twitter.com/${result.twitterScreenName}/status/${tweet.id_str}`,
-                    title: result.twitterAccount,
-                    description: tweet.text,
-                    fields: [{
-                        name: 'From',
-                        value: tweet.user.location,
-                        inline: true
-                    }],
-                    footer: {
-                        text: `Tweet crée le ${new Date()}`,
-                        icon_url: 'https://cdn1.iconfinder.com/data/icons/iconza-circle-social/64/697029-twitter-512.png'
-                    }
-                }
+                embed: embedObject
             });
         }
     });
