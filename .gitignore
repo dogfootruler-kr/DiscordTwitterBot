@@ -75,7 +75,6 @@ typings/
 # FuseBox cache
 .fusebox/
 
-auth.json
 accountList.json
 
 .vscode/
