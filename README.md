@@ -21,6 +21,11 @@ ACCESS_TOKEN_SECRET=
 DISCORD_TOKEN=
 ```
 
+### Running the app
+```shell
+npm start
+```
+
 ### Dependencies
 
 ```json
