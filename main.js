@@ -1,6 +1,5 @@
 require('dotenv').config()
 var Discord = require('discord.io');
-var logger = require('winston');
 var Twitter = require('twit');
 var accountList = require('./accountList.json');
 var fs = require('fs');
@@ -14,24 +13,13 @@ var client = new Twitter({
 
 var StreamClient;
 
-// Configure logger settings
-logger.remove(logger.transports.Console);
-logger.add(new logger.transports.Console, {
-    colorize: true
-});
-
-logger.level = 'debug';
-// Initialize Discord Bot
-
 var bot = new Discord.Client({
     token: process.env.DISCORD_TOKEN,
     autorun: true
 });
 
 bot.on('ready', function(evt) {
-    logger.info('Connected');
-    logger.info('Logged in as: ');
-    logger.info(bot.username + ' - (' + bot.id + ')');
+    console.log(bot.username + ' - (' + bot.id + ')');
     startFollowing();
 });
 
@@ -61,11 +49,13 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                     });
 
                     var json = JSON.stringify(accountList);
-                    fs.writeFile('./accountList.json', json, 'utf8', () => {});
+                    fs.writeFile('./accountList.json', json, 'utf8', () => {
+                        console.log(`${userObj[0].name} ajoute a la liste.`);
+                    });
 
                     bot.sendMessage({
                         to: channelID,
-                        message: `J'ai ajoute ${userObj[0].name} dans la liste des comptes a suivre.`
+                        message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
                     });
 
                     StreamClient.stop();
@@ -85,11 +75,13 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                 accountList.accounts = accountList.accounts.filter(obj => (obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase() || (obj.channelID !== channelID && obj.twitterScreenName.toLowerCase() === args[1].toLowerCase())));
                 
                 var json = JSON.stringify(accountList);
-                fs.writeFile('./accountList.json', json, 'utf8', () => {});
+                fs.writeFile('./accountList.json', json, 'utf8', () => {
+                    console.log(`${args[1]} enleve a la liste.`);
+                });
                 
                 bot.sendMessage({
                     to: channelID,
-                    message: `J'ai enleve ${args[1]} de la liste des comptes a suivre.`
+                    message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
                 });
                 break;
             default:
@@ -104,7 +96,6 @@ bot.on('message', function(user, userID, channelID, message, evt) {
 
 bot.on('disconnect', function(errMsg, code) {
     console.log(`Disconnected from Discord. Error Code ${code}. Message ${errMsg}.`);
-    bot.disconnect();
     bot.connect();
 });
 
@@ -119,6 +110,11 @@ function startFollowing() {
             let text = '';
             let imgURL = '';
             let embedObject = {};
+            let fields = [{
+                name: 'Envoyé depuis',
+                value: tweet.user.location ? tweet.user.location : 'Localisation inconnue',
+                inline: true
+            }];
 
             if (tweet.extended_tweet) {
                 text = tweet.extended_tweet.full_text;
@@ -128,8 +124,23 @@ function startFollowing() {
                 text = tweet.text;
             }
 
-            if (tweet.extended_entities && !!tweet.extended_entities.media.length) {
+            if (tweet.extended_entities && !!tweet.extended_entities.media.length && tweet.extended_entities.media[0].type === 'photo') {
                 imgURL = tweet.extended_entities.media[0].media_url;
+                if (tweet.extended_entities.media.length > 1) {
+                    for (var j = 1; j < tweet.extended_entities.media.length; j++) {
+                        fields.push({
+                            name: `Photo numéro ${j + 1}`,
+                            value: tweet.extended_entities.media[j].media_url
+                        });
+                    }
+                }
+            } else if (tweet.extended_entities && !!tweet.extended_entities.media.length && tweet.extended_entities.media[0].type !== 'photo') {
+                if (tweet.extended_entities.media[0].video_info.variants.length > 0) {
+                    fields.push({
+                        name: `Vidéo/gif`,
+                        value: (tweet.extended_entities.media[0].video_info.variants.filter(a => a.bitrate >= 832000)[0] || {}).url
+                    });
+                }
             }
 
             embedObject = {
@@ -139,12 +150,14 @@ function startFollowing() {
                     icon_url: result.iconURL,
                     url: `https://twitter.com/${result.twitterScreenName}`
                 },
-                thumbnail: {
-                    url: `${imgURL}`
-                },
                 url: `https://twitter.com/${result.twitterScreenName}/status/${tweet.id_str}`,
-                title: result.twitterAccount,
-                description: text
+                title: 'Lien vers le tweet',
+                description: text,
+                image: {
+                    url: imgURL
+                },
+                fields: fields,
+                timestamp: new Date().toISOString()
             };
 
             bot.sendMessage({
