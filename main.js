@@ -49,7 +49,7 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                     });
 
                     var json = JSON.stringify(accountList);
-                    fs.writeFile('./accountList.json', json, 'utf8', () => {
+                    fs.writeFileSync('./accountList.json', json, 'utf8', () => {
                         console.log(`${userObj[0].name} ajoute a la liste.`);
                     });
 
@@ -75,7 +75,7 @@ bot.on('message', function(user, userID, channelID, message, evt) {
                 accountList.accounts = accountList.accounts.filter(obj => (obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase() || (obj.channelID !== channelID && obj.twitterScreenName.toLowerCase() === args[1].toLowerCase())));
                 
                 var json = JSON.stringify(accountList);
-                fs.writeFile('./accountList.json', json, 'utf8', () => {
+                fs.writeFileSync('./accountList.json', json, 'utf8', () => {
                     console.log(`${args[1]} enleve a la liste.`);
                 });
                 
