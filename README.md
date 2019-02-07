@@ -28,12 +28,10 @@ npm start
 
 ### Dependencies
 
-```json
-dependencies: {
+```
+"dependencies": {
     "discord.io": "github:izy521/discord.io",
     "dotenv": "^6.1.0",
-    "express": "^4.16.4",
-    "twit": "^2.2.11",
-    "winston": "^3.1.0"
+    "twit": "^2.2.11"
 }
 ```
