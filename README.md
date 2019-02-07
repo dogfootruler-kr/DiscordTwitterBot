@@ -2,7 +2,7 @@
 
 ### Description
 
-Discord bot that allows you to follow twitter user, then sends any tweets to a specific Discord channel.
+Discord bot that allows you to follow twitter users, then sends any tweets to a specific Discord channel.
 
 ### Installing
 
