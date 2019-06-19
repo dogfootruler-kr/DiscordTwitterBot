@@ -1,15 +1,16 @@
 {
-    "name": "twitter-bot",
-    "version": "1.0.0",
-    "description": "Twitter bot for Discord",
-    "main": "main.js",
-    "author": "Yolo Swag",
-    "scripts": {
-        "start": "node main.js"
-    },
-    "dependencies": {
-        "discord.io": "github:izy521/discord.io",
-        "dotenv": "^6.1.0",
-        "twit": "^2.2.11"
-    }
+  "name": "twitter-bot",
+  "version": "1.0.0",
+  "description": "Twitter bot for Discord",
+  "main": "main.js",
+  "author": "Yolo Swag",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "dependencies": {
+    "discord.io": "github:izy521/discord.io",
+    "dotenv": "^6.1.0",
+    "pg": "^7.10.0",
+    "twit": "^2.2.11"
+  }
 }

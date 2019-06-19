@@ -1,111 +1,155 @@
-require('dotenv').config()
-var Discord = require('discord.io');
-var Twitter = require('twit');
-var accountList = require('./accountList.json');
-var fs = require('fs');
+'use strict';
 
-var client = new Twitter({
+require('dotenv').config();
+const Discord = require('discord.io');
+const Twitter = require('twit');
+const DB = require('./db');
+const db = new DB();
+
+/* eslint-disable camelcase */
+const client = new Twitter({
     consumer_key: process.env.CONSUMER_KEY,
     consumer_secret: process.env.CONSUMER_SECRET,
     access_token: process.env.ACCESS_TOKEN_KEY,
     access_token_secret: process.env.ACCESS_TOKEN_SECRET
 });
+/* eslint-enable camelcase */
 
-var StreamClient;
-
-var bot = new Discord.Client({
+const bot = new Discord.Client({
     token: process.env.DISCORD_TOKEN,
     autorun: true
 });
 
-bot.on('ready', function(evt) {
-    console.log(bot.username + ' - (' + bot.id + ')');
-    startFollowing();
+
+var StreamClient;
+var accountList;
+var queue = [];
+
+db.selectAllUsers().then((res) => {
+    accountList = res;
 });
 
-bot.on('message', function(user, userID, channelID, message, evt) {
-    if (message.substring(0, 1) == '!') {
+setInterval(() => {
+    if (queue.length === 0) { return; }
+
+    let messageToSend = queue.shift();
+    let roughByteSize = JSON.stringify(messageToSend).length;
+    console.log(`Sending message queue. Queue length: ${queue.length}, Message length: ${roughByteSize}`);
+
+    if (roughByteSize >= 4096) { return; }
+
+    bot.sendMessage(messageToSend);
+}, 1500);
+
+bot.on('ready', function () {
+    console.log(bot.username + ' - (' + bot.id + ')');
+    setTimeout(startFollowing, 5000);
+});
+
+bot.on('message', function (user, userID, channelid, message, evt) {
+    if (message.substring(0, 1) === '!') {
         var args = message.substring(1).split(' ');
         var cmd = args[0];
 
         switch (cmd) {
-            // !follow
-            case 'follow':
-                client.get('users/lookup', { screen_name: args[1] }, function(error, userObj) {
-                    if (error) {
-                        bot.sendMessage({
-                            to: channelID,
-                            message: `Impossible de trouver le compte ${args[1]}.`
+        // !follow
+        case 'follow':
+            client.get('users/lookup', {
+                screen_name: args[1] // eslint-disable-line camelcase
+            }, function (error, userObj) {
+                if (error) {
+                    queue.push({
+                        to: channelid,
+                        message: `Impossible de trouver le compte ${args[1]}.`
+                    });
+                    return;
+                }
+
+                db.selectUserByScreenNameAndChannelId(args[1], evt.d.channel_id).then((result) => {
+                    if (result) {
+                        queue.push({
+                            to: channelid,
+                            message: `${userObj[0].name} est déja dans la liste des comptes a suivre.`
                         });
                         return;
                     }
 
-                    accountList.accounts.push({
-                        channelID: evt.d.channel_id,
-                        twitterAccount: userObj[0].name,
-                        twitterScreenName: args[1],
-                        twitterAccountID: userObj[0].id_str,
-                        iconURL: userObj[0].profile_image_url
-                    });
+                    db.insert({
+                        channelid: evt.d.channel_id,
+                        twitteraccount: userObj[0].name,
+                        twitterscreenname: args[1],
+                        twitteraccountid: userObj[0].id_str,
+                        iconurl: userObj[0].profile_image_url
+                    }).then(() => {
+                        db.selectAllUsers().then((res) => {
+                            accountList = res;
 
-                    var json = JSON.stringify(accountList);
-                    fs.writeFileSync('./accountList.json', json, 'utf8', () => {
-                        console.log(`${userObj[0].name} ajoute a la liste.`);
-                    });
+                            queue.push({
+                                to: channelid,
+                                message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
+                            });
 
-                    bot.sendMessage({
-                        to: channelID,
-                        message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
+                            StreamClient.stop();
+                            startFollowing();
+                        });
                     });
-
-                    StreamClient.stop();
-                    startFollowing();
                 });
+            });
 
-                break;
+            break;
             // !list
-            case 'list':
-                bot.sendMessage({
-                    to: channelID,
-                    message: `Voici la liste des comptes: ${accountList.accounts.filter(a => a.channelID === channelID).map(a => a.twitterAccount + ' (@' + a.twitterScreenName + ')').join(', ')}.`
-                });
-                break;
+        case 'list':
+            queue.push({
+                to: channelid,
+                message: `Voici la liste des comptes: ${accountList.filter(a => a.channelid === channelid)
+                    .map(a => a.twitteraccount + ' (@' + a.twitterscreenname + ')').join(', ')}.`
+            });
+            break;
             // !remove
-            case 'remove':
-                accountList.accounts = accountList.accounts.filter(obj => (obj.twitterScreenName.toLowerCase() !== args[1].toLowerCase() || (obj.channelID !== channelID && obj.twitterScreenName.toLowerCase() === args[1].toLowerCase())));
-                
-                var json = JSON.stringify(accountList);
-                fs.writeFileSync('./accountList.json', json, 'utf8', () => {
-                    console.log(`${args[1]} enleve a la liste.`);
+        case 'remove':
+            db.selectUserByScreenNameAndChannelId(args[1], channelid).then((result) => {
+                if (!result) {
+                    queue.push({
+                        to: channelid,
+                        message: `${args[1]} n'est pas dans la liste des comptes a suivre.`
+                    });
+                    return;
+                }
+
+                db.deleteByScreenName(args[1].toLowerCase()).then(() => {
+                    db.selectAllUsers().then((res) => {
+                        accountList = res;
+                        console.log(`${args[1]} enleve a la liste.`);
+                        queue.push({
+                            to: channelid,
+                            message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
+                        });
+                        StreamClient.stop();
+                        startFollowing();
+                    });
                 });
-                
-                bot.sendMessage({
-                    to: channelID,
-                    message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
-                });
-                break;
-            default:
-                bot.sendMessage({
-                    to: channelID,
-                    message: `Je ne connais pas cette commande, essaye !follow, !list ou !remove.`
-                });
-                break;
+            });
+            break;
+        default:
+            break;
         }
     }
 });
 
-bot.on('disconnect', function(errMsg, code) {
+bot.on('disconnect', function (errMsg, code) {
     console.log(`Disconnected from Discord. Error Code ${code}. Message ${errMsg}.`);
     bot.connect();
 });
 
 function startFollowing() {
-    StreamClient = client.stream('statuses/filter', { follow: accountList.accounts.map(a => a.twitterAccountID).join(',') });
-    StreamClient.on('tweet', function(tweet) {
+    StreamClient = client.stream('statuses/filter', {
+        follow: accountList.map(a => a.twitteraccountid).join(',')
+    });
+    StreamClient.on('tweet', function (tweet) {
         // base on twitter account send it to the right channel
-        let results = accountList.accounts.filter(obj => obj.twitterAccountID === tweet.user.id_str);
+        let results = accountList.filter(obj => obj.twitteraccountid === tweet.user.id_str);
 
-        for (let i=0; i<results.length; i++) {
+        for (let i = 0; i < results.length; i++) {
             let result = results[i];
             let text = '';
             let imgURL = '';
@@ -118,13 +162,14 @@ function startFollowing() {
 
             if (tweet.extended_tweet) {
                 text = tweet.extended_tweet.full_text;
-            } else if (tweet.retweeted_status && tweet.retweeted_status.extended_tweet) {
-                text = tweet.retweeted_status.extended_tweet.full_text;
+            } else if (tweet.retweeted_status) {
+                break;
             } else {
                 text = tweet.text;
             }
 
-            if (tweet.extended_entities && !!tweet.extended_entities.media.length && tweet.extended_entities.media[0].type === 'photo') {
+            if (tweet.extended_entities && !!tweet.extended_entities.media.length
+                && tweet.extended_entities.media[0].type === 'photo') {
                 imgURL = tweet.extended_entities.media[0].media_url;
                 if (tweet.extended_entities.media.length > 1) {
                     for (var j = 1; j < tweet.extended_entities.media.length; j++) {
@@ -134,11 +179,13 @@ function startFollowing() {
                         });
                     }
                 }
-            } else if (tweet.extended_entities && !!tweet.extended_entities.media.length && tweet.extended_entities.media[0].type !== 'photo') {
+            } else if (tweet.extended_entities && !!tweet.extended_entities.media.length
+                && tweet.extended_entities.media[0].type !== 'photo') {
                 if (tweet.extended_entities.media[0].video_info.variants.length > 0) {
                     fields.push({
-                        name: `Vidéo/gif`,
-                        value: (tweet.extended_entities.media[0].video_info.variants.filter(a => a.bitrate >= 832000)[0] || {}).url
+                        name: 'Vidéo/gif',
+                        value: (tweet.extended_entities.media[0]
+                            .video_info.variants.filter(a => a.bitrate >= 832000)[0] || {}).url
                     });
                 }
             }
@@ -146,11 +193,11 @@ function startFollowing() {
             embedObject = {
                 color: 3447003,
                 author: {
-                    name: `${result.twitterAccount} (@${result.twitterScreenName})`,
-                    icon_url: result.iconURL,
-                    url: `https://twitter.com/${result.twitterScreenName}`
+                    name: `${result.twitteraccount} (@${result.twitterscreenname})`,
+                    icon_url: result.iconurl, // eslint-disable-line camelcase
+                    url: `https://twitter.com/${result.twitterscreenname}`
                 },
-                url: `https://twitter.com/${result.twitterScreenName}/status/${tweet.id_str}`,
+                url: `https://twitter.com/${result.twitterscreenname}/status/${tweet.id_str}`,
                 title: 'Lien vers le tweet',
                 description: text,
                 image: {
@@ -160,16 +207,39 @@ function startFollowing() {
                 timestamp: new Date().toISOString()
             };
 
-            bot.sendMessage({
-                to: result.channelID,
+            queue.push({
+                to: result.channelid,
                 embed: embedObject
             });
         }
     });
 
-    StreamClient.on('error', function(error) {
+    StreamClient.on('error', function (error) {
         console.error(error);
         StreamClient.stop();
         startFollowing();
     });
 }
+
+setInterval(() => {
+    accountList.map((user) => {
+        client.get('users/lookup', {
+            screen_name: user.twitterscreenname // eslint-disable-line camelcase
+        }, function (error, userObj) {
+            if (error) {
+                return;
+            }
+
+            if (user.iconurl === userObj[0].profile_image_url) {
+                return;
+            }
+
+            db.updateByScreenName(user.twitterscreenname, userObj[0].profile_image_url);
+            db.selectAllUsers().then((res) => {
+                accountList = res;
+            });
+
+            console.log(`Profile picture for ${user.twitteraccount} updated.`);
+        });
+    });
+}, 43200000);
