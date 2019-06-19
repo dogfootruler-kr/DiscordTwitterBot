@@ -5,6 +5,8 @@
 
 > Discord bot that allows you to follow twitter users, then sends any tweets to a specific Discord channel.
 
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/patricelynde/DiscordTwitterBot)
+
 ## Installing dependencies
 
 ```
