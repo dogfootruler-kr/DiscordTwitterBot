@@ -1,0 +1,169 @@
+--
+-- PostgreSQL database dump
+--
+
+-- Dumped from database version 10.6 (Ubuntu 10.6-1.pgdg16.04+1)
+-- Dumped by pg_dump version 11.2
+
+-- Started on 2019-06-19 22:35:06
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- TOC entry 198 (class 1259 OID 30560485)
+-- Name: conseilid_seq; Type: SEQUENCE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE SEQUENCE public.conseilid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.conseilid_seq OWNER TO {{POSTGREUSERNAME}};
+
+--
+-- TOC entry 199 (class 1259 OID 30560752)
+-- Name: ingredientid_seq; Type: SEQUENCE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE SEQUENCE public.ingredientid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.ingredientid_seq OWNER TO {{POSTGREUSERNAME}};
+
+--
+-- TOC entry 201 (class 1259 OID 30561970)
+-- Name: preparationid_seq; Type: SEQUENCE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE SEQUENCE public.preparationid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.preparationid_seq OWNER TO {{POSTGREUSERNAME}};
+
+--
+-- TOC entry 200 (class 1259 OID 30560771)
+-- Name: recipeid_seq; Type: SEQUENCE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE SEQUENCE public.recipeid_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.recipeid_seq OWNER TO {{POSTGREUSERNAME}};
+
+SET default_tablespace = '';
+
+SET default_with_oids = false;
+
+--
+-- TOC entry 197 (class 1259 OID 30379377)
+-- Name: users; Type: TABLE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    channelid character varying(40) NOT NULL,
+    twitteraccount character varying(40) NOT NULL,
+    twitterscreenname character varying(40) NOT NULL,
+    twitteraccountid character varying(40) NOT NULL,
+    iconurl character varying(150) NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO {{POSTGREUSERNAME}};
+
+--
+-- TOC entry 196 (class 1259 OID 30379375)
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.users_id_seq OWNER TO {{POSTGREUSERNAME}};
+
+--
+-- TOC entry 3825 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- TOC entry 3694 (class 2604 OID 30379380)
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- TOC entry 3696 (class 2606 OID 30379382)
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: {{POSTGREUSERNAME}}
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 3823 (class 0 OID 0)
+-- Dependencies: 3
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: {{POSTGREUSERNAME}}
+--
+
+REVOKE ALL ON SCHEMA public FROM postgres;
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+GRANT ALL ON SCHEMA public TO {{POSTGREUSERNAME}};
+GRANT ALL ON SCHEMA public TO PUBLIC;
+
+
+--
+-- TOC entry 3824 (class 0 OID 0)
+-- Dependencies: 597
+-- Name: LANGUAGE plpgsql; Type: ACL; Schema: -; Owner: postgres
+--
+
+GRANT ALL ON LANGUAGE plpgsql TO {{POSTGREUSERNAME}};
+
+
+-- Completed on 2019-06-19 22:35:07
+
+--
+-- PostgreSQL database dump complete
+--
+

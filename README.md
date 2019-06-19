@@ -13,6 +13,9 @@ npm i
 
 ## Configuration
 
+- replace {{POSTGREUSERNAME}} by your postgresql username in the schema.psql file
+- run the schema.psql file to create the tables in your postgresql database
+
 Create a `.env` file (or as environment variables) at the root of the repository with those keys from the Twitter API, the discord API and the POSTGRESQL url:
 ```
 CONSUMER_KEY=
