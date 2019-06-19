@@ -7,7 +7,7 @@
 
 ## Installing dependencies
 
-```shell
+```
 npm i
 ```
 
