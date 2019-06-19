@@ -1,0 +1,33 @@
+    
+{
+  "name": "Discord Twitter Bot",
+  "description": "Discord bot that follows users on twitter and send the tweets to a discord channel.",
+  "keywords": [
+    "discord",
+    "twitter"
+  ],
+  "repository": "https://github.com/patricelynde/DiscordMaiteBot",
+  "env": {
+    "DISCORD_TOKEN": {
+      "description": "A secret token for the discord API.",
+      "required": true
+    },
+    "ACCESS_TOKEN": {
+      "description": "Get ACCESS_TOKEN, ACCESS_TOKEN_SECRET, CONSUMER_KEY and CONSUMER_SECRET here:\nhttps://developer.twitter.com/en/apps\nTwitter access token"
+    },
+    "ACCESS_TOKEN_SECRET": {
+      "description": "Twitter access token secret"
+    },
+    "CONSUMER_KEY": {
+      "description": "Twitter consumer key"
+    },
+    "CONSUMER_SECRET": {
+      "description": "Twitter consumer secret"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql"
+    }
+  ]
+}
