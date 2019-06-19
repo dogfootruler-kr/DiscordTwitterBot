@@ -13,13 +13,14 @@ npm i
 
 ## Configuration
 
-Create a `.env` file (or as environment variables) at the root of the repository with those keys from the Twitter API and the discord API:
+Create a `.env` file (or as environment variables) at the root of the repository with those keys from the Twitter API, the discord API and the POSTGRESQL url:
 ```
 CONSUMER_KEY=
 CONSUMER_SECRET=
 ACCESS_TOKEN_KEY=
 ACCESS_TOKEN_SECRET=
 DISCORD_TOKEN=
+DATABASE_URL=
 ```
 
 ## Usage
