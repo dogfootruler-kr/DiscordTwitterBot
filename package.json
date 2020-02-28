@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Twitter bot for Discord",
   "main": "main.js",
-  "author": "Yolo Swag",
+  "author": "Patoulacci",
   "scripts": {
     "start": "node main.js"
   },
