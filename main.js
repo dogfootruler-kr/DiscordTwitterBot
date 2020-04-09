@@ -52,93 +52,95 @@ bot.on('message', function (user, userID, channelid, message, evt) {
         var cmd = args[0];
 
         switch (cmd) {
-        // !follow
-        case 'follow':
-            client.get('users/lookup', {
-                screen_name: args[1] // eslint-disable-line camelcase
-            }, function (error, userObj) {
-                if (error) {
-                    queue.push({
-                        to: channelid,
-                        message: `Impossible de trouver le compte ${args[1]}.`
-                    });
-                    return;
-                }
-
-                db.selectUserByScreenNameAndChannelId(args[1], evt.d.channel_id).then((result) => {
-                    if (result) {
+            // !follow
+            case 'follow':
+                client.get('users/lookup', {
+                    screen_name: args[1] // eslint-disable-line camelcase
+                }, function (error, userObj) {
+                    if (error) {
                         queue.push({
                             to: channelid,
-                            message: `${userObj[0].name} est déja dans la liste des comptes a suivre.`
+                            message: `Impossible de trouver le compte ${args[1]}.`
                         });
                         return;
                     }
 
-                    db.insert({
-                        channelid: evt.d.channel_id,
-                        twitteraccount: userObj[0].name,
-                        twitterscreenname: args[1],
-                        twitteraccountid: userObj[0].id_str,
-                        iconurl: userObj[0].profile_image_url
-                    }).then(() => {
-                        db.selectAllUsers().then((res) => {
-                            accountList = res;
-
+                    db.selectUserByScreenNameAndChannelId(args[1], evt.d.channel_id).then((result) => {
+                        if (result) {
                             queue.push({
                                 to: channelid,
-                                message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
+                                message: `${userObj[0].name} est déja dans la liste des comptes a suivre.`
                             });
+                            return;
+                        }
 
+                        db.insert({
+                            channelid: evt.d.channel_id,
+                            twitteraccount: userObj[0].name,
+                            twitterscreenname: args[1],
+                            twitteraccountid: userObj[0].id_str,
+                            iconurl: userObj[0].profile_image_url
+                        }).then(() => {
+                            db.selectAllUsers().then((res) => {
+                                accountList = res;
+
+                                queue.push({
+                                    to: channelid,
+                                    message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
+                                });
+
+                                StreamClient.stop();
+                                startFollowing();
+                            });
+                        });
+                    });
+                });
+
+                break;
+            // !list
+            case 'list':
+                queue.push({
+                    to: channelid,
+                    message: `Voici la liste des comptes: ${accountList.filter(a => a.channelid === channelid)
+                        .map(a => a.twitteraccount + ' (@' + a.twitterscreenname + ')').join(', ')}.`
+                });
+                break;
+            // !remove
+            case 'remove':
+                db.selectUserByScreenNameAndChannelId(args[1], channelid).then((result) => {
+                    if (!result) {
+                        queue.push({
+                            to: channelid,
+                            message: `${args[1]} n'est pas dans la liste des comptes a suivre.`
+                        });
+                        return;
+                    }
+
+                    db.deleteByScreenName(args[1].toLowerCase()).then(() => {
+                        db.selectAllUsers().then((res) => {
+                            accountList = res;
+                            console.log(`${args[1]} enleve a la liste.`);
+                            queue.push({
+                                to: channelid,
+                                message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
+                            });
                             StreamClient.stop();
                             startFollowing();
                         });
                     });
                 });
-            });
-
-            break;
-            // !list
-        case 'list':
-            queue.push({
-                to: channelid,
-                message: `Voici la liste des comptes: ${accountList.filter(a => a.channelid === channelid)
-                    .map(a => a.twitteraccount + ' (@' + a.twitterscreenname + ')').join(', ')}.`
-            });
-            break;
-            // !remove
-        case 'remove':
-            db.selectUserByScreenNameAndChannelId(args[1], channelid).then((result) => {
-                if (!result) {
-                    queue.push({
-                        to: channelid,
-                        message: `${args[1]} n'est pas dans la liste des comptes a suivre.`
-                    });
-                    return;
-                }
-
-                db.deleteByScreenName(args[1].toLowerCase()).then(() => {
-                    db.selectAllUsers().then((res) => {
-                        accountList = res;
-                        console.log(`${args[1]} enleve a la liste.`);
-                        queue.push({
-                            to: channelid,
-                            message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
-                        });
-                        StreamClient.stop();
-                        startFollowing();
-                    });
-                });
-            });
-            break;
-        default:
-            break;
+                break;
+            default:
+                break;
         }
     }
 });
 
 bot.on('disconnect', function (errMsg, code) {
-    console.log(`Disconnected from Discord. Error Code ${code}. Message ${errMsg}.`);
-    bot.connect();
+    if (code === 1000) {
+        console.error('Reconnecting now...');
+        bot.connect();
+    }
 });
 
 function startFollowing() {
