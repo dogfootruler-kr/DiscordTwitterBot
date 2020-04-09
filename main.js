@@ -143,7 +143,8 @@ bot.on('disconnect', function (errMsg, code) {
 
 function startFollowing() {
     // Stop any running instances.
-    StreamClient.stop();
+    if (StreamClient)
+        StreamClient.stop();
 
     StreamClient = client.stream('statuses/filter', {
         follow: accountList.map(a => a.twitteraccountid).join(',')
