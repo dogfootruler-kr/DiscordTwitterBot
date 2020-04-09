@@ -89,7 +89,6 @@ bot.on('message', function (user, userID, channelid, message, evt) {
                                     message: `J'ai ajouté ${userObj[0].name} dans la liste des comptes a suivre.`
                                 });
 
-                                StreamClient.stop();
                                 startFollowing();
                             });
                         });
@@ -124,7 +123,6 @@ bot.on('message', function (user, userID, channelid, message, evt) {
                                 to: channelid,
                                 message: `J'ai enlevé ${args[1]} de la liste des comptes a suivre.`
                             });
-                            StreamClient.stop();
                             startFollowing();
                         });
                     });
@@ -144,6 +142,9 @@ bot.on('disconnect', function (errMsg, code) {
 });
 
 function startFollowing() {
+    // Stop any running instances.
+    StreamClient.stop();
+
     StreamClient = client.stream('statuses/filter', {
         follow: accountList.map(a => a.twitteraccountid).join(',')
     });
