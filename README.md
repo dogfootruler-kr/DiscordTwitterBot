@@ -36,9 +36,9 @@ npm run start
 
 Once the bot is up and running, here is the discord commands:
 ```
-!list // List followed users
-!follow username // Adds a user to the list
-!remove username // Removes a user from the list
+!list // List followed users on this channel
+!follow username // Adds a user to follow on this channel
+!remove username // Removes a user from this channel
 ```
 
 ## Dependencies
